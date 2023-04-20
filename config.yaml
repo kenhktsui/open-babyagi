@@ -1,0 +1,14 @@
+objective: Design a long running agent that iteratively chats with large language model and store information in vectorDB.
+initial_task: asdd
+llm_client:
+  host: model
+  port: 8000
+retriever_encoder:
+  model_name: facebook/contriever
+retriever:
+  collection_name: tasks
+  qdrant_host: qdrant
+  qdrant_port: 6333
+  top_k: 3
+logger:
+  log_path: agent.log
