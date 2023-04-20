@@ -1,3 +1,4 @@
+import time
 from collections import deque
 from autonomous_agent.memory import Encoder, DenseRetriever
 from autonomous_agent.schemas import Task
@@ -64,12 +65,13 @@ class AutonomousAgent:
 
                 for new_task in new_tasks:
                     task_id_counter += 1
-                    new_task.task_id = task_id_counter
+                    new_task['task_id'] = task_id_counter
+                    new_task = Task(**new_task)
                     self.add_task(new_task)
-                prioritization_agent(this_task_id, self.config.llm_client.host, self.config.llm_client.port)
+                prioritization_agent(self.objective, self.task_list, this_task_id, self.config.llm_client.host, self.config.llm_client.port)
 
             self.logger.close()
-            time.sleep(1)  # Sleep before checking the task list again
+            time.sleep(5)  # Sleep before checking the task list again
             loop_idx += 1
 
 

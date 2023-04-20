@@ -1,6 +1,7 @@
 from typing import List, Dict
 from autonomous_agent.llm_client import huggingface_chat_completion_create_retrying
 from autonomous_agent.memory import DenseRetriever
+from autonomous_agent.schemas import Task
 
 
 def task_creation_agent(objective: str, result: Dict, task_description: str, task_list: List[str], host: str, port: int):
@@ -11,33 +12,31 @@ def task_creation_agent(objective: str, result: Dict, task_description: str, tas
     Based on the result, create new tasks to be completed by the AI system that do not overlap with incomplete tasks.
     Return the tasks as an array."""
     messages = [{"role": "system", "content": prompt}]
-    response = huggingface_chat_completion_create_retrying(messages=messages, host=host, port=port)
+    response = huggingface_chat_completion_create_retrying(messages=messages, host=host, port=port)["choices"][0]["message"]["content"]
 
     new_tasks = response.split("\n") if "\n" in response else [response]
     return [{"task_name": task_name} for task_name in new_tasks]
 
 
-def prioritization_agent(this_task_id: int, host: str,  port: int):
-    global task_list
-    task_names = [t["task_name"] for t in task_list]
+def prioritization_agent(objective, task_list, this_task_id: int, host: str,  port: int):
+    task_names = [t.task_name for t in task_list]
     next_task_id = int(this_task_id) + 1
     prompt = f"""
     You are a task prioritization AI tasked with cleaning the formatting of and reprioritizing the following tasks: {task_names}.
-    Consider the ultimate objective of your team:{OBJECTIVE}.
+    Consider the ultimate objective of your team:{objective}.
     Do not remove any tasks. Return the result as a numbered list, like:
     #. First task
     #. Second task
     Start the task list with number {next_task_id}."""
     messages = [{"role": "system", "content": prompt}]
-    response = huggingface_chat_completion_create_retrying(messages=messages, host=host, port=port)
+    response = huggingface_chat_completion_create_retrying(messages=messages, host=host, port=port)["choices"][0]["message"]["content"]
     new_tasks = response.split("\n") if "\n" in response else [response]
-    task_list = deque()
     for task_string in new_tasks:
         task_parts = task_string.strip().split(".", 1)
         if len(task_parts) == 2:
             task_id = task_parts[0].strip()
             task_name = task_parts[1].strip()
-            task_list.append({"task_id": task_id, "task_name": task_name})
+            task_list.append(Task(**{"task_id": task_id, "task_name": task_name}))
 
 
 def execution_agent(objective: str, task: str, top_k: int, host: str, port: int, retriever: DenseRetriever) -> str:
@@ -60,7 +59,7 @@ def execution_agent(objective: str, task: str, top_k: int, host: str, port: int,
     Your task: {task}\nResponse:"""
     messages = [{"role": "system", "content": prompt}]
     response = huggingface_chat_completion_create_retrying(messages=messages, host=host, port=port, temperature=0.7, max_tokens=2000)
-    return response
+    return response["choices"][0]["message"]["content"]
 
 
 def context_agent(query: str, top_k: int, retriever: DenseRetriever) -> List[str]:
@@ -77,4 +76,4 @@ def context_agent(query: str, top_k: int, retriever: DenseRetriever) -> List[str
     """
     results = retriever.search(query, top_k)
     sorted_results = sorted(results, key=lambda x: x["score"], reverse=True)
-    return [(str(item["task"])) for item in sorted_results]
+    return [item["task_name"] for item in sorted_results]

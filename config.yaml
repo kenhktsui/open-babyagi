@@ -1,8 +1,8 @@
 objective: Design a long running agent that iteratively chats with large language model and store information in vectorDB.
-initial_task: asdd
+initial_task: design agents that discuss with each others to accomplish a task that requires long term planning
 llm_client:
   host: model
-  port: 8000
+  port: 5000
 retriever_encoder:
   model_name: facebook/contriever
 retriever:

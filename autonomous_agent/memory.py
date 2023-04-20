@@ -32,7 +32,7 @@ class DenseRetriever:
     def __init__(self, encoder: Encoder, collection_name: str, qdrant_host: str, qdrant_port: int):
         self.encoder = encoder
         self.collection_name = collection_name
-        self.qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port)
+        self.qdrant_client = QdrantClient(host=qdrant_host, port=qdrant_port, api_key="mCAVE3KwxHP2DxiAv6NlQd-jS6eWKJCP4SmXxHPjc4xZMh9OlO1CiA")
         existing_collections = self.qdrant_client.get_collections().collections
         existing_collections = [i.name for i in existing_collections]
         if self.collection_name not in existing_collections:
@@ -44,11 +44,11 @@ class DenseRetriever:
     def insert(self, task: Task) -> dict:
         vector = self.encoder.encode(task.result)
         task_dict = task.dict()
-        result_id = task_dict.pop("result_id")
+        task_id = task_dict.pop("task_id")
         response = self.qdrant_client.upsert(
                                              collection_name=self.collection_name,
                                              points=[
-                                                 PointStruct(id=result_id,
+                                                 PointStruct(id=task_id,
                                                              payload=task_dict,
                                                              vector=vector
                                                              )
@@ -67,4 +67,4 @@ class DenseRetriever:
             with_payload=True,
             top=top_k,
         )
-        return [{"task": hit.payload["task"], "score": hit.score} for hit in hits]
+        return [{**hit.payload, "score": hit.score} for hit in hits]
